@@ -1,4 +1,4 @@
-"""Pipeline d'analyse des trajets Uber."""
+"""Pipeline d'analyse des trajets Uber + visualisation."""
 
 import sys
 from pathlib import Path
@@ -9,16 +9,17 @@ from generate import generer_trajets
 from extract import extraire
 from transform import transformer
 from load import initialiser_base, charger
+from visualize import generer_graphiques
 
 
 CSV_PATH = Path(__file__).parent / "data" / "trajets_bruts.csv"
 DB_PATH = Path(__file__).parent / "data" / "uber.db"
+CHARTS_DIR = Path(__file__).parent / "charts"
 
 
 def afficher_indicateurs(conn):
     print("\n=== Indicateurs Uber ===")
 
-    # Moyennes
     row = conn.execute("""
         SELECT ROUND(AVG(prix), 0), ROUND(AVG(distance_km), 1), ROUND(AVG(duree_min), 0)
         FROM trajets
@@ -27,7 +28,6 @@ def afficher_indicateurs(conn):
     print(f"Distance moyenne : {row[1]} km")
     print(f"Durée moyenne : {row[2]} min")
 
-    # Top zones de départ
     print("\nTop zones de départ :")
     for r in conn.execute("""
         SELECT zone_depart, COUNT(*) AS nb
@@ -38,7 +38,6 @@ def afficher_indicateurs(conn):
     """):
         print(f"  {r[0]:15} {r[1]} trajets")
 
-    # Trajets les plus chers
     print("\n3 trajets les plus chers :")
     for r in conn.execute("""
         SELECT zone_depart, zone_arrivee, prix, distance_km
@@ -65,6 +64,12 @@ def main():
     print(f"Chargés dans {DB_PATH} : {nb}")
 
     afficher_indicateurs(conn)
+
+    print("\n=== Visualisation ===")
+    charts = generer_graphiques(conn, CHARTS_DIR)
+    if charts:
+        print(f"{len(charts)} graphiques générés dans {CHARTS_DIR}/")
+
     conn.close()
     print("\nPipeline terminé.")
 
